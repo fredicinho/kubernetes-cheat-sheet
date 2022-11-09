@@ -691,5 +691,49 @@ spec:
           restartPolicy: OnFailure
 ```
 
+## RBAC
+Enable RBAC
+````shell script
+kube-apiserver --authorization-mode=RBAC
+````
+
+### Role and ClusterRole
+Contains rules that represent a set of permissions.
+A Role always sets permissions withing a particular namespace.
+A ClusterRole is a non-namespaced resource.
+
+Example of a Role with permission on namespace "default" see pods:
+````yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+````
+
+With a ClusterRole you can scope the permissions on nodes, non-resource endpoints (like /healthz) and namespaces resources (across all namespaces).
+
+````yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: secret-reader
+rules:
+- apiGroups: [""]
+  #
+  # at the HTTP level, the name of the resource for accessing Secret
+  # objects is "secrets"
+  resources: ["secrets"]
+  verbs: ["get", "watch", "list"]
+````
+
+### RoleBinding and ClusterRoleBinding
+
+
 
 
