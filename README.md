@@ -850,6 +850,113 @@ worker01   Ready    <none>          3m43s   v1.25.3
 root@master:~# kubectl label node worker01 node-role.kubernetes.io/worker=worker
 ````
 
+## Create a HA Cluster
+For a HA Cluster you need 3 Control Planes and 3 worker nodes.
+The kube-apiserver needs to be behind a Load Balancer (Port 6443).
+
+Install the first control plane
+````shell script
+sudo kubeadm init --control-plane-endpoint "LOAD_BALANCER_DNS:LOAD_BALANCER_PORT" --upload-certs
+````
+
+Join the rest of the control-planes
+````shell script
+sudo kubeadm join {IP_OF_FIRST_CONTROLPLANE}:6443 --token 9vr73a.a8uxyaju799qwdjv --discovery-token-ca-cert-hash sha256:7c2e69131a36ae2a042a339b33381c6d0d43887e2de83720eff5359e26aec866 --control-plane --certificate-key f8902e114ef118304e561c3ecd4d0b543adc226b7a07f675f56564185ffe0c07
+````
+
+## Upgrade your cluster with kubeadm
+You have to do following steps:
+* Upgrade your primary control-plane
+* Upgrade additional control-planes
+* Upgrade your worker nodes
+
+### Upgrade control planes
+
+````shell script
+# Check your current version
+root@master:~# kubeadm version -o yaml
+clientVersion:
+  buildDate: "2022-10-12T10:55:36Z"
+  compiler: gc
+  gitCommit: 434bfd82814af038ad94d62ebe59b133fcb50506
+  gitTreeState: clean
+  gitVersion: v1.25.3
+  goVersion: go1.19.2
+  major: "1"
+  minor: "25"
+  platform: linux/amd64
+  
+# Determine which version to upgrade
+apt update
+apt-cache madison kubeadm
+
+# Upgrade your control-plane
+# replace x in 1.25.x-00 with the latest patch version
+apt-mark unhold kubeadm
+apt-get update && apt-get install -y kubeadm=1.25.x-00
+apt-mark hold kubeadm
+
+# Verify the upgrade plan
+kubeadm upgrade plan
+
+# Upgrade your control plane
+sudo kubeadm upgrade apply v1.25.x
+
+# You have to check if you have to upgrade your CNI profiver (in my usecase Flannel)
+
+# Upgrade your other control planes
+sudo kubeadm upgrade node v1.25.x
+
+# Drain the node to upgrade kubelet and kubectl
+kubectl drain <node-to-drain> --ignore-daemonsets
+
+# Upgrade kubelet and kubectl
+# replace x in 1.25.x-00 with the latest patch version
+apt-mark unhold kubelet kubectl && \
+apt-get update && apt-get install -y kubelet=1.25.x-00 kubectl=1.25.x-00 && \
+apt-mark hold kubelet kubectl
+
+# Restart the kubelet
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+# Uncordon the node
+kubectl uncordon <node-to-uncordon>
+````
+
+### Upgrade Worker nodes
+
+````shell script
+# Upgrade kubeadm
+# replace x in 1.25.x-00 with the latest patch version
+apt-mark unhold kubeadm && \
+apt-get update && apt-get install -y kubeadm=1.25.x-00 && \
+apt-mark hold kubeadm
+sudo kubeadm upgrade node
+
+# Drain the node
+kubectl drain <node-to-drain> --ignore-daemonsets
+
+# Upgrade kubectl and kubelet
+# replace x in 1.25.x-00 with the latest patch version
+apt-mark unhold kubelet kubectl && \
+apt-get update && apt-get install -y kubelet=1.25.x-00 kubectl=1.25.x-00 && \
+apt-mark hold kubelet kubectl
+
+# Restart the kubelet
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+# Uncordon the node
+kubectl uncordon <node-to-uncordon>
+
+# Verify the status of your cluster
+kubectl get nodes
+````
+
+
+
+
 
 
 
