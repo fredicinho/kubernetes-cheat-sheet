@@ -924,7 +924,7 @@ sudo systemctl restart kubelet
 kubectl uncordon <node-to-uncordon>
 ````
 
-### Upgrade Worker nodes
+### Upgrade Worker nodes
 
 ````shell script
 # Upgrade kubeadm
