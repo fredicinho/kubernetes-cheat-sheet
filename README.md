@@ -734,6 +734,126 @@ rules:
 
 ### RoleBinding and ClusterRoleBinding
 
+## Create a Cluster with kubeadm
+
+### Container Runtime
+On each node you need to install a container runtime.
+````shell script
+sudo apt-get update
+sudo apt-get install docker.io
+
+# Check your version
+docker --version
+
+# Start and enable docker
+sudo systemctl enable docker
+
+# Verify that it's running
+sudo systemctl status docker
+# Else you can start it
+sudo systemctl start docker
+
+# Install curl if it's not installed yet
+sudo apt-get install curl
+
+# Add a signing key to your package manager for repositories of kubernetes (kubeadm kubelet kubectl)
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+
+# Add kubernetes repositories to your package manager
+sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+
+# Install Kubernetes tools (kubeadm kubelet and kubectl)
+sudo apt-get install kubeadm kubelet kubectl
+sudo apt-mark hold kubeadm kubelet kubectl
+
+# Verify the installation
+kubeadm version
+
+# Turn off swap memory
+sudo swapoff -a
+
+# Assign a unique hostname for each host (master, worker01, etc.)
+sudo hostnamectl set-hostname master
+````
+
+### Install control-plane (master)
+
+Let's do it
+````shell script
+# Install control-plane
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+# Copy kubeconfig-File to .kube Folder
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+# Lets see the result
+root@master:~# kubectl get nodes
+NAME     STATUS     ROLES           AGE     VERSION
+master   NotReady   control-plane   3m43s   v1.25.3
+
+# Deploy a Pod Network (to allow communication between different nodes).
+# We will use Flannel as a virtual network
+sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+# Lets check again
+root@master:~# kubectl get nodes
+NAME     STATUS   ROLES           AGE     VERSION
+master   Ready    control-plane   5m43s   v1.25.3
+
+root@master:~# kubectl get pods --all-namespaces
+NAMESPACE      NAME                             READY   STATUS    RESTARTS   AGE
+kube-flannel   kube-flannel-ds-4wknq            1/1     Running   0          26s
+kube-system    coredns-565d847f94-8s2gr         1/1     Running   0          5m23s
+kube-system    coredns-565d847f94-tmrxr         1/1     Running   0          5m23s
+kube-system    etcd-master                      1/1     Running   0          5m35s
+kube-system    kube-apiserver-master            1/1     Running   0          5m35s
+kube-system    kube-controller-manager-master   1/1     Running   0          5m35s
+kube-system    kube-proxy-fm96s                 1/1     Running   0          5m23s
+kube-system    kube-scheduler-master            1/1     Running   0          5m35s
+
+# I also want to run my pods on the master node. Therefore I have to remove a label:
+````shell script
+kubectl taint nodes master node-role.kubernetes.io/control-plane-
+````
+
+# We are good to go!
+````
+
+### Add a worker node
+After our `kubeadm init` we received a command that looks like this
+````shell script
+kubeadm join {IP_OF_MASTER_NODE}:6443 --token {MY_AWESOME_TOKEN} --discovery-token-ca-cert-hash {AWESOME_HASH}
+````
+This token last for 24 hours. If you want to create a new one, just enter:
+````shell script
+kubeadm token create --print-join-command
+````
+We have to execute this command to add our worker nodes to our super awesome cluster! You have to execute the following commands on your new Worker Node!!! 
+Let's do it.
+
+````shell script
+# We named our worker node worker01
+sudo hostnamectl set-hostname worker01
+
+# Join our worker node to the cluster
+kubeadm join {IP_OF_MASTER_NODE}:6443 --token {MY_AWESOME_TOKEN} --discovery-token-ca-cert-hash {AWESOME_HASH}
+
+# Check on the master node if the worker node is joined
+root@master:~# kubectl get nodes
+NAME       STATUS   ROLES           AGE     VERSION
+master     Ready    control-plane   21m     v1.25.3
+worker01   Ready    <none>          3m43s   v1.25.3
+
+# Lets label our worker node as "worker"
+root@master:~# kubectl label node worker01 node-role.kubernetes.io/worker=worker
+````
+
+
+
+
+
 
 
 
