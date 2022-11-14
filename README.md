@@ -25,7 +25,7 @@
    * [ServiceAccount](#sa)
    * [LimitRange](#lr)
    * [Taint](#taint)
-   * [NoteSelector and NodeAffinity](#nodeselector)
+   * [NodeSelector and NodeAffinity](#nodeselector)
    * [Readiness and Liveness Probe](#readiness)
    * [Logs](#logs)
    * [Metrics](#metrics)
