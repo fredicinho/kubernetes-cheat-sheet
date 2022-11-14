@@ -3,6 +3,39 @@
 * [Create a Cluster with kubeadm](#create-cluster)
 * [Create a HA Cluster](#create-ha-cluster)
 * [Upgrade a Cluster](#upgrade-cluster)
+* [Manage ETCD](#manage-etcd)
+* [Hostnetwork Configuration](#hostnetwork)
+* [Kubernetes Resources](#kubernetes-resources)
+   * [Node](#node)
+   * [Namespace](#namespace)
+   * [Label and Selectors](#label)
+   * [Pod](#pod)
+   * [StorageClasses](#storageclasses)
+   * [Persistent Volume](#pv)
+   * [Persistent Volume Claim](#pvc)
+   * [ReplicationController](#rc)
+   * [ReplicaSet](#rs)
+   * [Deployment](#dep)
+      * [Rolling Updates & Rollbacks](#rol)
+   * [Service](#svc)
+   * [Ingress](#ingress)
+   * [NetworkPolicy](#np)
+   * [ConfigMaps](#cm)
+   * [Secrets](#secrets)
+   * [ServiceAccount](#sa)
+   * [LimitRange](#lr)
+   * [Taint](#taint)
+   * [NoteSelector and NodeAffinity](#nodeselector)
+   * [Readiness and Liveness Probe](#readiness)
+   * [Logs](#logs)
+   * [Metrics](#metrics)
+   * [Job](#job)
+   * [CronJob](#cronjob)
+   * [RBAC](#rbac)
+       * [Role and ClusterRole](#role)
+       * [RoleBinding and ClusterRoleBinding](#rolb)
+   * [Horizontal Pod Autoscaling](#hp)
+
 
 <a name="create-cluster"></a>
 ## Create a Cluster with kubeadm
@@ -134,13 +167,13 @@ Join the rest of the control-planes
 sudo kubeadm join {IP_OF_FIRST_CONTROLPLANE}:6443 --token 9vr73a.a8uxyaju799qwdjv --discovery-token-ca-cert-hash sha256:7c2e69131a36ae2a042a339b33381c6d0d43887e2de83720eff5359e26aec866 --control-plane --certificate-key f8902e114ef118304e561c3ecd4d0b543adc226b7a07f675f56564185ffe0c07
 ````
 
+<a name="upgrade-cluster"></a>
 ## Upgrade your cluster with kubeadm
 You have to do following steps:
 * Upgrade your primary control-plane
 * Upgrade additional control-planes
 * Upgrade your worker nodes
 
-<a name="upgrade-cluster"></a>
 ### Upgrade control planes
 
 ````shell script
@@ -224,33 +257,40 @@ kubectl uncordon <node-to-uncordon>
 # Verify the status of your cluster
 kubectl get nodes
 ````
+
+<a name="manage-etcd"></a>
 ## Manage ETCD
 ### Create Backup of ETCD
 ### Restore ETCD from Backup
 
-## Hostnetworking Configuration with kubeproxy and kubelet
+<a name="hostnetwork"></a>
+## Hostnetworking Configuration
 
 
-## Use and Configure CoreDNS
+### Use and Configure CoreDNS
 
-## Container Network Interface (CNI)
+### Container Network Interface (CNI)
 
+<a name="kubernetes-resources"></a>
+## Kubectl Cheat Sheet
 
-## Node
+<a name="node"></a>
+### Node
 ````shell script
 kubectl get nodes {node-name} --show-labels 
 kubectl describe node {node-name}
 kubectl get nodes {node-name} -o yaml | grep -B {NUMBER_OF_LINES_BEVOR_KEYWORD} -A {NUMBER_OF_LINES_AFTER_KEYWORD} {KEYWORD}
 ````
-
-## Namespace
+<a name="namespace"></a>
+### Namespace
 ````shell script
 kubectl create namespace {namespace-name}
 kubectl config set-context --current --namespace={namespace-name}
 kubectl config view --minify | grep namespace:                      # Get current namespace
 ````
 
-## Label and Selectors
+<a name="label"></a>
+### Label and Selectors
 ````shell script
 kubectl label nodes {node-name} {LABEL_KEY}={LABEL_VALUE}
 kubectl label pods {pod-name} {LABEL_KEY}={LABEL_VALUE}
@@ -284,8 +324,8 @@ spec:
         image: gcr.io/google_samples/gb-frontend:v3
 ````
 
-
-## Pod
+<a name="pod"></a>
+### Pod
 ````shell script
 kubectl run {pod-name} 
     --image={image-name} 
@@ -299,7 +339,7 @@ kubectl run {pod-name}
     --dry-run=client -o yaml > my-pod.yaml              # Save as yaml
 ````
 
-### Edit a Pod
+#### Edit a Pod
 You can just edit following specs of a pod:
 * spec.containers[*].image
 * spec.initContainers[*].image
@@ -316,7 +356,7 @@ kubectl delete pod {pod-name}
 kubectl apply -f my-pod-to-edit.yaml
 `````
 
-### Manifest
+#### Manifest
 ````yaml
 kind: Pod
 apiVersion: v1
@@ -398,28 +438,28 @@ spec:
               memory: "2Gi"               # Just terminates the container if it goes over the limit
               cpu: 2                      # Throttle the container if it goes over the limit
 ````
+<a name="storageclasses"></a>
+### StorageClasses
 
-## Storage Classes
+<a name="pv"></a>
+### Persistent Volumes
 
-
-## Persistent Volumes
-
-### Volume Modes
+#### Volume Modes
 * Filesystem (default)
 * Block
 
-### Access Modes
+#### Access Modes
 * ReadWriteOnce: enables read and write and can be mounted by only one node
 * ReadOnlyMany: enables read only and can be mounted by multiple nodes (but not at the same time)
 * ReadWriteMany: both read and write, can be mounted by several nodes (not at the same time)
 
 
-### Reclaim Policy
+#### Reclaim Policy
 * Retain: manual reclaim
 * Recycle: basic scrub (rm -rf /thevolume/*)
 * Delete: associated storage asset such as AWS EBS, GCE PD, Azure Disk, or OpenStack Cinder volume is deleted
 
-### Manifest
+#### Manifest
 
 ````yaml
 apiVersion: v1
@@ -436,11 +476,12 @@ spec:
       fsType: ext4
 ````
 
+<a name="pvc"></a>
+### Persistent Volume Claim
 
-## Persistent Volume Claim
-
-## ReplicationController
-### Manifest
+<a name="rc"></a>
+### ReplicationController
+#### Manifest
 ````yaml
 apiVersion: v1
 kind: ReplicationController
@@ -465,7 +506,8 @@ spec:
         - containerPort: 80
 ````
 
-## ReplicaSet
+<a name="rs"></a>
+### ReplicaSet
 Difference between ReplicaSet and ReplicationController:
 * ReplicationController supports equality based selectors
 * ReplicaSet supports equality based and set based selectors
@@ -478,7 +520,7 @@ Equality Based selectors:
 Set Based selectors:
 * Allow filtering keys according to a set of values
 * supported operators: IN, NOTIN, EXISTS (only Key identifier)
-### Manifest
+#### Manifest
 ````yaml
 apiVersion: apps/v1
 kind: ReplicaSet
@@ -505,7 +547,8 @@ spec:
         - containerPort: 80
 ````
 
-## Deployment
+<a name="dep"></a>
+### Deployment
 ````shell script
 kubectl create deployment {deployment-name} 
     --image={IMAGE_NAME} 
@@ -515,7 +558,7 @@ kubectl create deployment {deployment-name}
 
 kubectl create -f my_deployment_file.yml --record       # Record the Deployment to history!
 ````
-### Manifest
+#### Manifest
 ````yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -545,7 +588,8 @@ spec:
         - containerPort: 80
 ````
 
-### Rolling Updates & Rollbacks
+<a name="rol"></a>
+#### Rolling Updates & Rollbacks
 **Strategytypes**:
 * **Recreate**: Terminates all Pods and Recreates them. The problem is, that the application will contain a downtime.
 * **RollingUpdate**: Terminates and updates every Pod one by one. Your Application won't have any downtime.
@@ -566,7 +610,9 @@ kubectl rollout undo deployment/{deployment-name}
 # Edit Rolloutstrategy of Deployment
 kubectl edit deployment {deployment-name} 
 ````
-## Service
+
+<a name="svc"></a>
+### Service
 
 * *ClusterIP*: Exposes the Service on a Cluster-Internal IP. This is the default ServiceType.
 * *NodePort*: Exposes the Service on each Node's IP at a static port (the NodePort). A ClusterIP Service, to which the NodePort Service routes, is automatically created. You'll be able to contact the NodePort Service, from outside the cluster, by requesting <NodeIP>:<NodePort>.
@@ -598,7 +644,7 @@ kubectl expose deployment {deployment-name}
       
 ```
 
-### Manifest
+#### Manifest
 NodePort-Service
 ````yaml
 apiVersion: v1
@@ -637,14 +683,15 @@ LoadBalancer-Service
 
 ````
 
-## Ingress
+<a name="ingress"></a>
+### Ingress
 ````shell script
 kubectl create ingress {ingress-name} 
     --rule={host-name}/{path}={service-name}:{port-of-service}[,tls={my-cert-name}]
     --annotation {my-annotation}={value}
 ````
 
-### Manifest
+#### Manifest
 ````yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -676,11 +723,12 @@ spec:
               number: 80
 ````
 
-## NetworkPolicies
+<a name="np"></a>
+### NetworkPolicies
 ````shell script
 
 ````
-### Manifest
+#### Manifest
 ````yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -724,13 +772,14 @@ spec:
       port: 5978
 ````
 
-## ConfigMaps
+<a name="cm"></a>
+### ConfigMaps
 ````shell script
 kubectl create configmap {configmap-name} --from-literal=KEY=VALUE --from-literal=KEY2=VALUE2 ...
 kubectl create configmap {configmap-name} --from-file={PATH_OF_FILE}
 ````
 
-### Manifest
+#### Manifest
 ````yaml
 apiVersion: v1
 kind: ConfigMap
@@ -742,7 +791,8 @@ data:
   KEY2: VALUE2
 ````
 
-## Secrets
+<a name="secrets"></a>
+### Secrets
 ````shell script
 kubectl create secret generic {secret-name} --from-literal=key1=value1 --from-literal=key2=value2
 kubectl create secret generic {secret-name} --from-file={PATH_TO_FILE}
@@ -753,18 +803,18 @@ kubectl create secret docker-registry regcred \
     --docker-email=<your-email>
 ````
 When you use from literal, you don't have to encode the values. If you use manifests, you have to encode the values!
-#### Encode
+##### Encode
 ````shell script
 echo -n 'mypassword' | base64
 bXlwYXNzd29yZA==
 ````
 
-#### Decode
+##### Decode
 ```shell script
 echo -n 'bXlwYXNzd29yZA==' | base64 -d
 mypassword
 ```
-### Manifest
+#### Manifest
 ````yaml
 apiVersion: v1
 kind: Secret
@@ -778,7 +828,8 @@ type: Opaque
 ````
 Pls... don't use secrets in your repo like that. Use instead Sealed Secrets: https://github.com/bitnami-labs/sealed-secrets
 
-## ServiceAccount
+<a name="sa"></a>
+### ServiceAccount
 When you create a ServiceAccount, a Token is created as a Secret and mapped to this ServiceAccount.
 When you create a Pod and no ServiceAccount is mapped, Kubernetes maps automatically the default-ServiceAccount as a Volume under /var/run/secrets/kubernetes.io/serviceaccount!
 ````shell script
@@ -786,7 +837,8 @@ kubectl get serviceaccount
 kubectl create serviceaccount {serviceaccount-name}
 ````
 
-## LimitRange
+<a name="lr"></a>
+### LimitRange
 Set default Memory Requests and Limits for a Namespace (per container)
 ````yaml
 apiVersion: v1
@@ -822,13 +874,15 @@ spec:
     type: Container
 ````
 
-## Taint
+<a name="taint"></a>
+### Taint
 `````shell script
 kubectl taint nodes {node-name} key=value:{taint-effect}  # NoSchedule|PreferNoSchedule|NoExecute
 kubectl describe node {node-name} | grep Taint
 `````
 
-## NodeSelector and NodeAffinity
+<a name="nodeselector"></a>
+### NodeSelector and NodeAffinity
 Define on which node the pod should be scheduled!
 You can achieve this with "nodeSelector" (setting label of node) or with NodeAffinity (multiple Rules for labels).
 ````yaml
@@ -848,7 +902,8 @@ spec:
             - Medium
 ````
 
-## Readiness and Liveness Probe
+<a name="readiness"></a>
+### Readiness and Liveness Probe
 Defines a procedure how Kubernetes can check if a Container is ready or alive.
 ````yaml
 <POD-Manifest>
@@ -878,14 +933,16 @@ spec:
         '' # Same usage like readinessProbe
 ````
 
-## Logs
+<a name="logs"></a>
+### Logs
 ```shell script
 kubectl logs {pod-name}
 kubectl logs -f {pod-name} # Live Logs
 kubectl logs -f {pod-name} {container-name}
 ```
 
-## Metrics
+<a name="metrics"></a>
+### Metrics
 Install Metrics
 ````shell script
 git clone https://github.com/kodekloudhub/kubernetes-metrics-server.git
@@ -897,11 +954,12 @@ kubectl top node
 kubectl top pod
 ```
 
-## Jobs
+<a name="job"></a>
+### Jobs
 ````shell script
 kubectl create job --image={image-name} --dry-run=client -o yaml > job.yaml
 ````
-### Manifest
+#### Manifest
 ````yaml
 apiVersion: batch/v1
 kind: Job
@@ -919,14 +977,16 @@ spec:
       restartPolicy: Never
   backoffLimit: 4
 ````
-## CronJobs
+
+<a name="cronjob"></a>
+### CronJobs
 ````shell script
 kubectl create cronjob {cronjob-name} 
     --image={image-name} 
     --schedule="30 20 * * *" 
     --dry-run=client -o yaml > mycronjob.yaml
 ````
-### Manifest
+#### Manifest
 ```yaml
 apiVersion: batch/v1
 kind: CronJob
@@ -949,13 +1009,15 @@ spec:
           restartPolicy: OnFailure
 ```
 
-## RBAC
+<a name="rbac"></a>
+### RBAC
 Enable RBAC
 ````shell script
 kube-apiserver --authorization-mode=RBAC
 ````
 
-### Role and ClusterRole
+<a name="role"></a>
+#### Role and ClusterRole
 Contains rules that represent a set of permissions.
 A Role always sets permissions withing a particular namespace.
 A ClusterRole is a non-namespaced resource.
@@ -990,9 +1052,11 @@ rules:
   verbs: ["get", "watch", "list"]
 ````
 
-### RoleBinding and ClusterRoleBinding
+<a name="roleb"></a>
+#### RoleBinding and ClusterRoleBinding
 
-## Horizontal Pod Autoscaler
+<a name="hp"></a>
+### Horizontal Pod Autoscaling
 
 
 
